@@ -64,18 +64,19 @@ namespace ChatImprovements.mod {
             linkFinder = new Regex(@"(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'.,<>?«»“”‘’]))"
                 /*, RegexOptions.Compiled*/); // compiled regexes are not supported in the version of Unity used by Scrolls :(
 
-            chatRoomsField = typeof(ChatUI).GetField("chatRooms", BindingFlags.Instance | BindingFlags.NonPublic);
-            timeStampStyleField = typeof(ChatUI).GetField("timeStampStyle", BindingFlags.Instance | BindingFlags.NonPublic);
-            chatLogStyleField = typeof(ChatUI).GetField("chatLogStyle", BindingFlags.Instance | BindingFlags.NonPublic);
-            challengeUserMethod = typeof(ChatUI).GetMethod("ChallengeUser", BindingFlags.Instance | BindingFlags.NonPublic);
-            tradeUserMethod = typeof(ChatUI).GetMethod("TradeUser", BindingFlags.Instance | BindingFlags.NonPublic);
-            profileUserMethod = typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic);
-            userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+            allowSendingChallengesField = typeof(ChatUI).GetField("allowSendingChallenges", BindingFlags.Instance | BindingFlags.NonPublic);
             canOpenContextMenuField = typeof(ChatUI).GetField("canOpenContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
             chatlogAreaInnerField = typeof(ChatUI).GetField("chatlogAreaInner", BindingFlags.Instance | BindingFlags.NonPublic);
-            chatScrollField = typeof(ChatUI).GetField("chatScrollField", BindingFlags.Instance | BindingFlags.NonPublic);
-            allowSendingChallengesField = typeof(ChatUI).GetField("allowSendingChallenges", BindingFlags.Instance | BindingFlags.NonPublic);
+            chatLogStyleField = typeof(ChatUI).GetField("chatLogStyle", BindingFlags.Instance | BindingFlags.NonPublic);
+            chatRoomsField = typeof(ChatUI).GetField("chatRooms", BindingFlags.Instance | BindingFlags.NonPublic);
+            chatScrollField = typeof(ChatUI).GetField("chatScroll", BindingFlags.Instance | BindingFlags.NonPublic);
+            timeStampStyleField = typeof(ChatUI).GetField("timeStampStyle", BindingFlags.Instance | BindingFlags.NonPublic);
+            userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            challengeUserMethod = typeof(ChatUI).GetMethod("ChallengeUser", BindingFlags.Instance | BindingFlags.NonPublic);
             closeUserMenuMethod = typeof(ChatUI).GetMethod("CloseUserMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+            tradeUserMethod = typeof(ChatUI).GetMethod("TradeUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            profileUserMethod = typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic);
         }
 
         // there must be a better way of generating the proper delegates without declaring these functions
@@ -193,11 +194,11 @@ namespace ChatImprovements.mod {
                 ChatRooms chatRooms = (ChatRooms) chatRoomsField.GetValue(target);
                 ChatRooms.RoomLog currentRoomChatLog = chatRooms.GetCurrentRoomChatLog();
                 if (currentRoomChatLog != null) {
-                    GUIStyle timeStampStyle = (GUIStyle)chatRoomsField.GetValue(target);
-                    GUIStyle chatLogStyle = (GUIStyle)chatLogStyleField.GetValue(target);
-                    Rect chatlogAreaInner = (Rect)chatlogAreaInnerField.GetValue(target);
-                    Vector2 chatScroll = (Vector2)chatScrollField.GetValue(target);
                     bool allowSendingChallenges = (bool)allowSendingChallengesField.GetValue(target);
+                    Rect chatlogAreaInner = (Rect)chatlogAreaInnerField.GetValue(target);
+                    GUIStyle chatLogStyle = (GUIStyle)chatLogStyleField.GetValue(target);
+                    Vector2 chatScroll = (Vector2)chatScrollField.GetValue(target);
+                    GUIStyle timeStampStyle = (GUIStyle)timeStampStyleField.GetValue(target);
                     ContextMenu<ChatRooms.ChatUser> userContextMenu = (ContextMenu<ChatRooms.ChatUser>) userContextMenuField.GetValue(target);
 
                     // set invisible draw color. We want the layout effects of drawing stuff, but we let the
