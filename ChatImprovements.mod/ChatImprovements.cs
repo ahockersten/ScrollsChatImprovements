@@ -13,16 +13,27 @@ namespace ChatImprovements.mod {
     public class ChatImprovements : BaseMod {
         private const bool debug = false;
 
+        // fields and methods in ChatUI
+        private FieldInfo allowSendingChallengesField;
+        private FieldInfo canOpenContextMenuField;
+        private FieldInfo chatlogAreaInnerField;
+        private FieldInfo chatLogStyleField;
+        private FieldInfo chatRoomsField;
+        private FieldInfo chatScrollField;
+        private FieldInfo timeStampStyleField;
+        private FieldInfo userContextMenuField;
+        private MethodInfo closeUserMenuMethod;
+        private MethodInfo challengeUserMethod;
+        private MethodInfo profileUserMethod;
+        private MethodInfo tradeUserMethod;
+
         private ChatUI target = null;
-        private ChatRooms chatRooms;
-        private GUIStyle timeStampStyle;
-        private GUIStyle chatLogStyle;
-        private Regex userRegex;
-        private Regex linkFinder;
         // dict from room log, to another dict that maps chatline to a ChatLineInfo
         private Dictionary<ChatRooms.RoomLog, Dictionary<ChatRooms.ChatLine, ChatLineInfo>> chatLineToChatLineInfoCache = new Dictionary<ChatRooms.RoomLog, Dictionary<ChatRooms.ChatLine, ChatLineInfo>>();
         // dict from room name, to another dict that maps username to ChatUser
         private Dictionary<string, Dictionary<string, ChatRooms.ChatUser>> userNameToUserCache = new Dictionary<string, Dictionary<string, ChatRooms.ChatUser>>();
+        private Regex userRegex;
+        private Regex linkFinder;
 
         private class ChatLineInfo {
             public string userName = null;
@@ -52,22 +63,34 @@ namespace ChatImprovements.mod {
             // I had to remove a " in there to make it work, but it should match well enough anyway
             linkFinder = new Regex(@"(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'.,<>?«»“”‘’]))"
                 /*, RegexOptions.Compiled*/); // compiled regexes are not supported in the version of Unity used by Scrolls :(
+
+            chatRoomsField = typeof(ChatUI).GetField("chatRooms", BindingFlags.Instance | BindingFlags.NonPublic);
+            timeStampStyleField = typeof(ChatUI).GetField("timeStampStyle", BindingFlags.Instance | BindingFlags.NonPublic);
+            chatLogStyleField = typeof(ChatUI).GetField("chatLogStyle", BindingFlags.Instance | BindingFlags.NonPublic);
+            challengeUserMethod = typeof(ChatUI).GetMethod("ChallengeUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            tradeUserMethod = typeof(ChatUI).GetMethod("TradeUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            profileUserMethod = typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+            canOpenContextMenuField = typeof(ChatUI).GetField("canOpenContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+            chatlogAreaInnerField = typeof(ChatUI).GetField("chatlogAreaInner", BindingFlags.Instance | BindingFlags.NonPublic); ;
+            chatScrollField = typeof(ChatUI).GetField("chatScrollField", BindingFlags.Instance | BindingFlags.NonPublic); ;
+            allowSendingChallengesField = typeof(ChatUI).GetField("allowSendingChallenges", BindingFlags.Instance | BindingFlags.NonPublic); ;
+            closeUserMenuMethod = typeof(ChatUI).GetMethod("CloseUserMenu", BindingFlags.Instance | BindingFlags.NonPublic);
         }
 
         // there must be a better way of generating the proper delegates without declaring these functions
         private void ChallengeUser(ChatRooms.ChatUser user) {
-            typeof(ChatUI).GetMethod("ChallengeUser", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, new object[] { user });
+            challengeUserMethod.Invoke(target, new object[] { user });
         }
         private void TradeUser(ChatRooms.ChatUser user) {
-            typeof(ChatUI).GetMethod("TradeUser", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, new object[] { user });
+            tradeUserMethod.Invoke(target, new object[] { user });
         }
         private void ProfileUser(ChatRooms.ChatUser user) {
-            typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, new object[] { user });
+            profileUserMethod.Invoke(target, new object[] { user });
         }
 
         private void OpenLink(ChatRooms.ChatUser user) {
-            MethodInfo closeUserMenu = typeof(ChatUI).GetMethod("CloseUserMenu", BindingFlags.Instance | BindingFlags.NonPublic);
-            closeUserMenu.Invoke(target, new object[] { });
+            closeUserMenuMethod.Invoke(target, new object[] { });
             ExtendedChatUser eu = (ExtendedChatUser)user;
             Process.Start(eu.link);
         }
@@ -81,7 +104,7 @@ namespace ChatImprovements.mod {
             bool foundUser = roomStillAvailable && userCache.TryGetValue(chatLineInfo.userName, out user);
             bool foundLink = chatLineInfo.link != null;
 
-            bool canOpenContextMenu = (bool)typeof(ChatUI).GetField("canOpenContextMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(target);
+            bool canOpenContextMenu = (bool)canOpenContextMenuField.GetValue(target);
             if (canOpenContextMenu && (foundUser || foundLink)) {
                 Vector3 mousePosition = Input.mousePosition;
                 // need 30 pixels of extra space per item added
@@ -109,7 +132,6 @@ namespace ChatImprovements.mod {
                     userContextMenu.add("Profile", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(ProfileUser));
                 }
                 if (userContextMenu != null) {
-                    FieldInfo userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
                     userContextMenuField.SetValue(target, userContextMenu);
                     App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 }
@@ -166,19 +188,17 @@ namespace ChatImprovements.mod {
                 }
             }
             else if (info.target is ChatUI && info.targetMethod.Equals("OnGUI")) {
-                if (target != (ChatUI)info.target) {
-                    chatRooms = (ChatRooms)typeof(ChatUI).GetField("chatRooms", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
-                    timeStampStyle = (GUIStyle)typeof(ChatUI).GetField("timeStampStyle", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
-                    chatLogStyle = (GUIStyle)typeof(ChatUI).GetField("chatLogStyle", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
-                    target = (ChatUI)info.target;
-                }
+                target = (ChatUI)info.target;
+
+                ChatRooms chatRooms = (ChatRooms) chatRoomsField.GetValue(target);
                 ChatRooms.RoomLog currentRoomChatLog = chatRooms.GetCurrentRoomChatLog();
                 if (currentRoomChatLog != null) {
-                    // these need to be refetched on every run, because otherwise old values will be used
-                    Rect chatlogAreaInner = (Rect)typeof(ChatUI).GetField("chatlogAreaInner", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
-                    Vector2 chatScroll = (Vector2)typeof(ChatUI).GetField("chatScroll", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
-                    bool allowSendingChallenges = (bool)typeof(ChatUI).GetField("allowSendingChallenges", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
-                    ContextMenu<ChatRooms.ChatUser> userContextMenu = (ContextMenu<ChatRooms.ChatUser>)typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(info.target);
+                    GUIStyle timeStampStyle = (GUIStyle)chatRoomsField.GetValue(target);
+                    GUIStyle chatLogStyle = (GUIStyle)chatLogStyleField.GetValue(target);
+                    Rect chatlogAreaInner = (Rect)chatlogAreaInnerField.GetValue(target);
+                    Vector2 chatScroll = (Vector2)chatScrollField.GetValue(target);
+                    bool allowSendingChallenges = (bool)allowSendingChallengesField.GetValue(target);
+                    ContextMenu<ChatRooms.ChatUser> userContextMenu = (ContextMenu<ChatRooms.ChatUser>) userContextMenuField.GetValue(target);
 
                     // set invisible draw color. We want the layout effects of drawing stuff, but we let the
                     // original code do all of the actual drawing
