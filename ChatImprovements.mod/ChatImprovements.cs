@@ -72,9 +72,9 @@ namespace ChatImprovements.mod {
             profileUserMethod = typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic);
             userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
             canOpenContextMenuField = typeof(ChatUI).GetField("canOpenContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
-            chatlogAreaInnerField = typeof(ChatUI).GetField("chatlogAreaInner", BindingFlags.Instance | BindingFlags.NonPublic); ;
-            chatScrollField = typeof(ChatUI).GetField("chatScrollField", BindingFlags.Instance | BindingFlags.NonPublic); ;
-            allowSendingChallengesField = typeof(ChatUI).GetField("allowSendingChallenges", BindingFlags.Instance | BindingFlags.NonPublic); ;
+            chatlogAreaInnerField = typeof(ChatUI).GetField("chatlogAreaInner", BindingFlags.Instance | BindingFlags.NonPublic);
+            chatScrollField = typeof(ChatUI).GetField("chatScrollField", BindingFlags.Instance | BindingFlags.NonPublic);
+            allowSendingChallengesField = typeof(ChatUI).GetField("allowSendingChallenges", BindingFlags.Instance | BindingFlags.NonPublic);
             closeUserMenuMethod = typeof(ChatUI).GetMethod("CloseUserMenu", BindingFlags.Instance | BindingFlags.NonPublic);
         }
 
