@@ -26,7 +26,21 @@ namespace ChatImprovements.mod {
 
         private class ChatLineInfo {
             public string userName = null;
-            public List<string> links = new List<string>();
+            public string link = null;
+        }
+
+        private class ExtendedChatUser : ChatRooms.ChatUser {
+            public string link = null;
+
+            public ExtendedChatUser(ChatRooms.ChatUser u) : base() {
+                if (u != null) {
+                    name = u.name;
+                    id = u.id;
+                    adminRole = u.adminRole;
+                    acceptChallenges = u.acceptChallenges;
+                    acceptTrades = u.acceptTrades;
+                }
+            }
         }
 
         public ChatImprovements() {
@@ -51,10 +65,11 @@ namespace ChatImprovements.mod {
             typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, new object[] { user });
         }
 
-        private void OpenLink(ChatRooms.ChatUser fakeUser) {
+        private void OpenLink(ChatRooms.ChatUser user) {
             MethodInfo closeUserMenu = typeof(ChatUI).GetMethod("CloseUserMenu", BindingFlags.Instance | BindingFlags.NonPublic);
             closeUserMenu.Invoke(target, new object[] { });
-            Process.Start(fakeUser.name);
+            ExtendedChatUser eu = (ExtendedChatUser)user;
+            Process.Start(eu.link);
         }
 
         private void CreateMenu(ChatLineInfo chatLineInfo, string roomName) {
@@ -64,23 +79,24 @@ namespace ChatImprovements.mod {
             // unlikely, but I want to guard against it anyway
             bool roomStillAvailable = userNameToUserCache.TryGetValue(roomName, out userCache);
             bool foundUser = roomStillAvailable && userCache.TryGetValue(chatLineInfo.userName, out user);
-            bool foundLinks = chatLineInfo.links.Count > 0;
+            bool foundLink = chatLineInfo.link != null;
 
             bool canOpenContextMenu = (bool)typeof(ChatUI).GetField("canOpenContextMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(target);
-            FieldInfo userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (canOpenContextMenu && (foundUser || foundLinks)) {
+            if (canOpenContextMenu && (foundUser || foundLink)) {
                 Vector3 mousePosition = Input.mousePosition;
                 Rect rect = new Rect(Mathf.Min((float)(Screen.width - 105), mousePosition.x), Mathf.Min((float)(Screen.height - 90 - 5), (float)Screen.height - mousePosition.y), 100f, 30f);
 
-                ContextMenu<ChatRooms.ChatUser> userContextMenu = new ContextMenu<ChatRooms.ChatUser>(user, rect);
-                if (foundLinks) {
-                    foreach (string link in chatLineInfo.links) {
-                        ChatRooms.ChatUser fakeUser = new ChatRooms.ChatUser();
-                        fakeUser.name = link;
-                        userContextMenu.add("Open " + link, new ContextMenu<ChatRooms.ChatUser>.URCMCallback(OpenLink));
-                    }
+                ContextMenu<ChatRooms.ChatUser> userContextMenu = null;
+                if (foundLink) {
+                    ExtendedChatUser extendedUser = new ExtendedChatUser(user);
+                    extendedUser.link = chatLineInfo.link;
+                    userContextMenu = new ContextMenu<ChatRooms.ChatUser>(extendedUser, rect);
+                    userContextMenu.add("Open Link", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(OpenLink));
                 }
                 if (foundUser && App.MyProfile.ProfileInfo.id != user.id) {
+                    if (userContextMenu == null) {
+                        userContextMenu = new ContextMenu<ChatRooms.ChatUser>(user, rect);
+                    }
                     if (user.acceptChallenges) {
                         userContextMenu.add("Challenge", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(ChallengeUser));
                     }
@@ -89,9 +105,11 @@ namespace ChatImprovements.mod {
                     }
                     userContextMenu.add("Profile", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(ProfileUser));
                 }
-                userContextMenuField.SetValue(target, userContextMenu);
-
-                App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
+                if (userContextMenu != null) {
+                    FieldInfo userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
+                    userContextMenuField.SetValue(target, userContextMenu);
+                    App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
+                }
             }
         }
 
@@ -188,9 +206,9 @@ namespace ChatImprovements.mod {
                                 String strippedMatch = Regex.Replace(userMatch.Value, @"<[^>]*>", String.Empty);
                                 chatLineInfo.userName = strippedMatch;
                             }
-                            MatchCollection linksFound = linkFinder.Matches(current.text);
-                            foreach (Match m in linksFound) {
-                                chatLineInfo.links.Add(m.Value);
+                            Match match = linkFinder.Match(current.text);
+                            if (match.Success) {
+                                chatLineInfo.link = match.Value;
                             }
                             chatLineCache.Add(current, chatLineInfo);
                         }
@@ -200,7 +218,7 @@ namespace ChatImprovements.mod {
                         Dictionary<string, ChatRooms.ChatUser> roomUsers;
                         // this should always be true, but it doesn't hurt to be a bit paranoid
                         bool foundRoomUsers = userNameToUserCache.TryGetValue(chatRooms.GetCurrentRoom(), out roomUsers);
-                        bool senderOrLinkAvailable = chatLineInfo.userName != null || chatLineInfo.links.Count > 0;
+                        bool senderOrLinkAvailable = chatLineInfo.userName != null || chatLineInfo.link != null;
                         if (senderOrLinkAvailable) {
                             if (GUILayout.Button(current.text, chatLogStyle, new GUILayoutOption[] { GUILayout.Width(chatlogAreaInner.width - (float)Screen.height * 0.1f - 20f) }) &&
                                 allowSendingChallenges && userContextMenu == null) {
