@@ -84,7 +84,10 @@ namespace ChatImprovements.mod {
             bool canOpenContextMenu = (bool)typeof(ChatUI).GetField("canOpenContextMenu", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(target);
             if (canOpenContextMenu && (foundUser || foundLink)) {
                 Vector3 mousePosition = Input.mousePosition;
-                Rect rect = new Rect(Mathf.Min((float)(Screen.width - 105), mousePosition.x), Mathf.Min((float)(Screen.height - 90 - 5), (float)Screen.height - mousePosition.y), 100f, 30f);
+                // need 30 pixels of extra space per item added
+                int extraHeightNeeded = (foundLink ? 1 : 0) * 30 + (foundUser && App.MyProfile.ProfileInfo.id != user.id && user.acceptChallenges ? 1 : 0) * 30 +
+                    (foundUser && App.MyProfile.ProfileInfo.id != user.id && user.acceptTrades ? 1 : 0) * 30 + (foundUser && App.MyProfile.ProfileInfo.id != user.id ? 1 : 0) * 30;
+                Rect rect = new Rect(Mathf.Min((float)(Screen.width - 105), mousePosition.x), Mathf.Min((float)(Screen.height - extraHeightNeeded - 5), (float)Screen.height - mousePosition.y), 100f, 30f);
 
                 ContextMenu<ChatRooms.ChatUser> userContextMenu = null;
                 if (foundLink) {
