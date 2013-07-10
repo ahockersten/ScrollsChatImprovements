@@ -34,7 +34,7 @@
       <HintPath>..\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="ScrollsModLoader.Interfaces">
-      <HintPath>..\ScrollsModLoader.Interfaces.dll</HintPath>
+      <HintPath>..\..\ScrollsModLoader\bin\Release\ScrollsModLoader.Interfaces.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
       <HintPath>..\UnityEngine.dll</HintPath>
