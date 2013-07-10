@@ -160,16 +160,13 @@ namespace ChatImprovements.mod {
             }
         }
 
-        public override bool BeforeInvoke(InvocationInfo info, out object returnValue) {
+        public override void BeforeInvoke(InvocationInfo info) {
             if (info.target is ChatRooms && info.targetMethod.Equals("LeaveRoom")) {
                 string room = (string)info.arguments[0];
                 if (userNameToUserCache.ContainsKey(room)) {
                     userNameToUserCache.Remove(room);
                 }
             }
-
-            returnValue = null;
-            return false;
         }
 
         public override void AfterInvoke(InvocationInfo info, ref object returnValue) {
