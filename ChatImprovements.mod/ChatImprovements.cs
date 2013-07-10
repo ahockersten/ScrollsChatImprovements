@@ -225,8 +225,11 @@ namespace ChatImprovements.mod {
                             chatLineInfo = new ChatLineInfo();
                             Match userMatch = userRegex.Match(current.text);
                             if (userMatch.Success) {
-                                // strip HTML from user name (usually a color). Yes. I know. Regexes should not be used on 
-                                // XML, but here it should not pose a problem
+                                // strip XML from user name (usually a color)
+                                // this won't strip usernames containing invalid XML correctly
+                                // usernames cannot contain < or > (messages can, but I think that's a server bug)
+                                // noHero provided this regex which parses full messages correctly, but it's (probably)
+                                // slower: @"(?></?\w+)(?>(?:[^>'""]+|'[^']*'|""[^""]*"")*)>
                                 String strippedMatch = Regex.Replace(userMatch.Value, @"<[^>]*>", String.Empty);
                                 chatLineInfo.userName = strippedMatch;
                             }
