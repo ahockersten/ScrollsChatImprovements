@@ -144,7 +144,7 @@ namespace ChatImprovements.mod {
         }
 
         public static int GetVersion() {
-            return 2;
+            return 3;
         }
 
         public static MethodDefinition[] GetHooks(TypeDefinitionCollection scrollsTypes, int version) {
@@ -177,20 +177,20 @@ namespace ChatImprovements.mod {
                 }
                 Dictionary<string, ChatUser> userCache = userNameToUserCache[roomInfo.roomName];
                 if (roomInfo.reset) {
-                    userCache.Clear ();
+                    userCache.Clear();
                 }
 
-                RoomInfoProfile[] updated = roomInfo.updated;
-                for (int i = 0; i < updated.Length; i++) {
-                    RoomInfoProfile p = updated[i];
+                for (int i = 0; i < roomInfo.updated.Length; i++) {
+                    RoomInfoProfile p = roomInfo.updated[i];
                     ChatUser user = ChatUser.FromRoomInfoProfile(p);
                     userCache[user.name] = user;
                 }
 
-                RoomInfoProfile[] removed = roomInfo.removed;
-                for (int i = 0; i < removed.Length; i++) {
-                    RoomInfoProfile p = updated[i];
-                    userCache.Remove(p.name);
+                for (int i = 0; i < roomInfo.removed.Length; i++) {
+                    RoomInfoProfile user = roomInfo.removed[i];
+                    if (userCache.ContainsKey(user.name)) {
+                        userCache.Remove(user.name);
+                    }
                 }
             }
             else if (info.target is ChatUI && info.targetMethod.Equals("OnGUI")) {
