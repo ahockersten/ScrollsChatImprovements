@@ -29,9 +29,9 @@ namespace ChatImprovements.mod {
 
         private ChatUI target = null;
         // dict from room log, to another dict that maps chatline to a ChatLineInfo
-        private Dictionary<ChatRooms.RoomLog, Dictionary<ChatRooms.ChatLine, ChatLineInfo>> chatLineToChatLineInfoCache = new Dictionary<ChatRooms.RoomLog, Dictionary<ChatRooms.ChatLine, ChatLineInfo>>();
+        private Dictionary<RoomLog, Dictionary<RoomLog.ChatLine, ChatLineInfo>> chatLineToChatLineInfoCache = new Dictionary<RoomLog, Dictionary<RoomLog.ChatLine, ChatLineInfo>>();
         // dict from room name, to another dict that maps username to ChatUser
-        private Dictionary<string, Dictionary<string, ChatRooms.ChatUser>> userNameToUserCache = new Dictionary<string, Dictionary<string, ChatRooms.ChatUser>>();
+        private Dictionary<string, Dictionary<string, ChatUser>> userNameToUserCache = new Dictionary<string, Dictionary<string, ChatUser>>();
         private Regex userRegex;
         private Regex linkFinder;
 
@@ -40,10 +40,10 @@ namespace ChatImprovements.mod {
             public string link = null;
         }
 
-        private class ExtendedChatUser : ChatRooms.ChatUser {
+        private class ExtendedChatUser : ChatUser {
             public string link = null;
 
-            public ExtendedChatUser(ChatRooms.ChatUser u) : base() {
+            public ExtendedChatUser(ChatUser u) : base() {
                 if (u != null) {
                     name = u.name;
                     id = u.id;
@@ -80,25 +80,25 @@ namespace ChatImprovements.mod {
         }
 
         // there must be a better way of generating the proper delegates without declaring these functions
-        private void ChallengeUser(ChatRooms.ChatUser user) {
+        private void ChallengeUser(ChatUser user) {
             challengeUserMethod.Invoke(target, new object[] { user });
         }
-        private void TradeUser(ChatRooms.ChatUser user) {
+        private void TradeUser(ChatUser user) {
             tradeUserMethod.Invoke(target, new object[] { user });
         }
-        private void ProfileUser(ChatRooms.ChatUser user) {
+        private void ProfileUser(ChatUser user) {
             profileUserMethod.Invoke(target, new object[] { user });
         }
 
-        private void OpenLink(ChatRooms.ChatUser user) {
+        private void OpenLink(ChatUser user) {
             closeUserMenuMethod.Invoke(target, new object[] { });
             ExtendedChatUser eu = (ExtendedChatUser)user;
             Process.Start(eu.link);
         }
 
         private void CreateMenu(ChatLineInfo chatLineInfo, string roomName) {
-            Dictionary<string, ChatRooms.ChatUser> userCache;
-            ChatRooms.ChatUser user = null;
+            Dictionary<string, ChatUser> userCache;
+            ChatUser user = null;
             // the scenario where a user is disconnected from a room but still connected to Mojang's servers seems
             // unlikely, but I want to guard against it anyway
             bool roomStillAvailable = userNameToUserCache.TryGetValue(roomName, out userCache);
@@ -113,24 +113,24 @@ namespace ChatImprovements.mod {
                     (foundUser && App.MyProfile.ProfileInfo.id != user.id && user.acceptTrades ? 1 : 0) * 30 + (foundUser && App.MyProfile.ProfileInfo.id != user.id ? 1 : 0) * 30;
                 Rect rect = new Rect(Mathf.Min((float)(Screen.width - 105), mousePosition.x), Mathf.Min((float)(Screen.height - extraHeightNeeded - 5), (float)Screen.height - mousePosition.y), 100f, 30f);
 
-                ContextMenu<ChatRooms.ChatUser> userContextMenu = null;
+                ContextMenu<ChatUser> userContextMenu = null;
                 if (foundLink) {
                     ExtendedChatUser extendedUser = new ExtendedChatUser(user);
                     extendedUser.link = chatLineInfo.link;
-                    userContextMenu = new ContextMenu<ChatRooms.ChatUser>(extendedUser, rect);
-                    userContextMenu.add("Open Link", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(OpenLink));
+                    userContextMenu = new ContextMenu<ChatUser>(extendedUser, rect);
+                    userContextMenu.add("Open Link", new ContextMenu<ChatUser>.URCMCallback(OpenLink));
                 }
                 if (foundUser && App.MyProfile.ProfileInfo.id != user.id) {
                     if (userContextMenu == null) {
-                        userContextMenu = new ContextMenu<ChatRooms.ChatUser>(user, rect);
+                        userContextMenu = new ContextMenu<ChatUser>(user, rect);
                     }
                     if (user.acceptChallenges) {
-                        userContextMenu.add("Challenge", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(ChallengeUser));
+                        userContextMenu.add("Challenge", new ContextMenu<ChatUser>.URCMCallback(ChallengeUser));
                     }
                     if (user.acceptTrades) {
-                        userContextMenu.add("Trade", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(TradeUser));
+                        userContextMenu.add("Trade", new ContextMenu<ChatUser>.URCMCallback(TradeUser));
                     }
-                    userContextMenu.add("Profile", new ContextMenu<ChatRooms.ChatUser>.URCMCallback(ProfileUser));
+                    userContextMenu.add("Profile", new ContextMenu<ChatUser>.URCMCallback(ProfileUser));
                 }
                 if (userContextMenu != null) {
                     userContextMenuField.SetValue(target, userContextMenu);
@@ -173,30 +173,38 @@ namespace ChatImprovements.mod {
             if (info.target is ChatRooms && info.targetMethod.Equals("SetRoomInfo")) {
                 RoomInfoMessage roomInfo = (RoomInfoMessage) info.arguments[0];
                 if (!userNameToUserCache.ContainsKey(roomInfo.roomName)) {
-                    userNameToUserCache.Add(roomInfo.roomName, new Dictionary<string, ChatRooms.ChatUser>());
+                    userNameToUserCache.Add(roomInfo.roomName, new Dictionary<string, ChatUser>());
                 }
-                Dictionary<string, ChatRooms.ChatUser> userCache = userNameToUserCache[roomInfo.roomName];
-                userCache.Clear();
+                Dictionary<string, ChatUser> userCache = userNameToUserCache[roomInfo.roomName];
+                if (roomInfo.reset) {
+                    userCache.Clear ();
+                }
 
-                RoomInfoMessage.RoomInfoProfile[] profiles = roomInfo.profiles;
-                for (int i = 0; i < profiles.Length; i++) {
-                    RoomInfoMessage.RoomInfoProfile p = profiles[i];
-                    ChatRooms.ChatUser user = ChatRooms.ChatUser.fromRoomInfoProfile(p);
-                    userCache.Add(user.name, user);
+                RoomInfoProfile[] updated = roomInfo.updated;
+                for (int i = 0; i < updated.Length; i++) {
+                    RoomInfoProfile p = updated[i];
+                    ChatUser user = ChatUser.FromRoomInfoProfile(p);
+                    userCache[user.name] = user;
+                }
+
+                RoomInfoProfile[] removed = roomInfo.removed;
+                for (int i = 0; i < removed.Length; i++) {
+                    RoomInfoProfile p = updated[i];
+                    userCache.Remove(p.name);
                 }
             }
             else if (info.target is ChatUI && info.targetMethod.Equals("OnGUI")) {
                 target = (ChatUI)info.target;
 
                 ChatRooms chatRooms = (ChatRooms) chatRoomsField.GetValue(target);
-                ChatRooms.RoomLog currentRoomChatLog = chatRooms.GetCurrentRoomChatLog();
+                RoomLog currentRoomChatLog = chatRooms.GetCurrentRoomChatLog();
                 if (currentRoomChatLog != null) {
                     bool allowSendingChallenges = (bool)allowSendingChallengesField.GetValue(target);
                     Rect chatlogAreaInner = (Rect)chatlogAreaInnerField.GetValue(target);
                     GUIStyle chatLogStyle = (GUIStyle)chatLogStyleField.GetValue(target);
                     Vector2 chatScroll = (Vector2)chatScrollField.GetValue(target);
                     GUIStyle timeStampStyle = (GUIStyle)timeStampStyleField.GetValue(target);
-                    ContextMenu<ChatRooms.ChatUser> userContextMenu = (ContextMenu<ChatRooms.ChatUser>) userContextMenuField.GetValue(target);
+                    ContextMenu<ChatUser> userContextMenu = (ContextMenu<ChatUser>) userContextMenuField.GetValue(target);
 
                     // set invisible draw color. We want the layout effects of drawing stuff, but we let the
                     // original code do all of the actual drawing
@@ -208,15 +216,15 @@ namespace ChatImprovements.mod {
 
                     GUILayout.BeginArea(chatlogAreaInner);
                     GUILayout.BeginScrollView(chatScroll, new GUILayoutOption[] { GUILayout.Width(chatlogAreaInner.width), GUILayout.Height(chatlogAreaInner.height)});
-                    foreach (ChatRooms.ChatLine current in currentRoomChatLog.getLines()) {
+                    foreach (RoomLog.ChatLine current in currentRoomChatLog.GetLines()) {
                         GUILayout.BeginHorizontal(new GUILayoutOption[0]);
                         GUILayout.Label(current.timestamp, timeStampStyle, new GUILayoutOption[] {
                             GUILayout.Width(20f + (float)Screen.height * 0.042f)});
 
                         if (!chatLineToChatLineInfoCache.ContainsKey(currentRoomChatLog)) {
-                            chatLineToChatLineInfoCache.Add(currentRoomChatLog, new Dictionary<ChatRooms.ChatLine, ChatLineInfo>());
+                            chatLineToChatLineInfoCache.Add(currentRoomChatLog, new Dictionary<RoomLog.ChatLine, ChatLineInfo>());
                         }
-                        Dictionary<ChatRooms.ChatLine, ChatLineInfo> chatLineCache = chatLineToChatLineInfoCache[currentRoomChatLog];
+                        Dictionary<RoomLog.ChatLine, ChatLineInfo> chatLineCache = chatLineToChatLineInfoCache[currentRoomChatLog];
                         ChatLineInfo chatLineInfo = null;
                         if (!chatLineCache.ContainsKey(current)) {
                             chatLineInfo = new ChatLineInfo();
@@ -239,14 +247,14 @@ namespace ChatImprovements.mod {
                         else {
                             chatLineInfo = chatLineCache[current];
                         }
-                        Dictionary<string, ChatRooms.ChatUser> roomUsers;
+                        Dictionary<string, ChatUser> roomUsers;
                         // this should always be true, but it doesn't hurt to be a bit paranoid
-                        bool foundRoomUsers = userNameToUserCache.TryGetValue(chatRooms.GetCurrentRoom(), out roomUsers);
+                        bool foundRoomUsers = userNameToUserCache.TryGetValue(chatRooms.GetCurrentRoom().name, out roomUsers);
                         bool senderOrLinkAvailable = chatLineInfo.userName != null || chatLineInfo.link != null;
                         if (senderOrLinkAvailable) {
                             if (GUILayout.Button(current.text, chatLogStyle, new GUILayoutOption[] { GUILayout.Width(chatlogAreaInner.width - (float)Screen.height * 0.1f - 20f) }) &&
                                 allowSendingChallenges && userContextMenu == null) {
-                                CreateMenu(chatLineInfo, chatRooms.GetCurrentRoom());
+                                CreateMenu(chatLineInfo, chatRooms.GetCurrentRoom().name);
                             }
                         }
                         // do the drawing found in the original code to make sure we don't fall out of sync
