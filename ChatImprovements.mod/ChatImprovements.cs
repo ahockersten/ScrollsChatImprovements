@@ -22,10 +22,14 @@ namespace ChatImprovements.mod {
         private FieldInfo chatScrollField;
         private FieldInfo timeStampStyleField;
         private FieldInfo userContextMenuField;
+        private MethodInfo blockUserMethod;
         private MethodInfo closeUserMenuMethod;
         private MethodInfo challengeUserMethod;
+        private MethodInfo friendUserMethod;
         private MethodInfo profileUserMethod;
         private MethodInfo tradeUserMethod;
+        private MethodInfo unblockUserMethod;
+        private MethodInfo whisperUserMethod;
 
         private ChatUI target = null;
         // dict from room log, to another dict that maps chatline to a ChatLineInfo
@@ -73,10 +77,14 @@ namespace ChatImprovements.mod {
             timeStampStyleField = typeof(ChatUI).GetField("timeStampStyle", BindingFlags.Instance | BindingFlags.NonPublic);
             userContextMenuField = typeof(ChatUI).GetField("userContextMenu", BindingFlags.Instance | BindingFlags.NonPublic);
 
+            blockUserMethod = typeof(ChatUI).GetMethod("BlockUser", BindingFlags.Instance | BindingFlags.NonPublic);
             challengeUserMethod = typeof(ChatUI).GetMethod("ChallengeUser", BindingFlags.Instance | BindingFlags.NonPublic);
             closeUserMenuMethod = typeof(ChatUI).GetMethod("CloseUserMenu", BindingFlags.Instance | BindingFlags.NonPublic);
-            tradeUserMethod = typeof(ChatUI).GetMethod("TradeUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            friendUserMethod = typeof(ChatUI).GetMethod("FriendUser", BindingFlags.Instance | BindingFlags.NonPublic);
             profileUserMethod = typeof(ChatUI).GetMethod("ProfileUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            tradeUserMethod = typeof(ChatUI).GetMethod("TradeUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            unblockUserMethod = typeof(ChatUI).GetMethod("UnblockUser", BindingFlags.Instance | BindingFlags.NonPublic);
+            whisperUserMethod = typeof(ChatUI).GetMethod("WhisperUser", BindingFlags.Instance | BindingFlags.NonPublic);
         }
 
         // there must be a better way of generating the proper delegates without declaring these functions
@@ -88,6 +96,18 @@ namespace ChatImprovements.mod {
         }
         private void ProfileUser(ChatUser user) {
             profileUserMethod.Invoke(target, new object[] { user });
+        }
+        private void FriendUser(ChatUser user) {
+            friendUserMethod.Invoke(target, new object[] { user });
+        }
+        private void BlockUser(ChatUser user) {
+            blockUserMethod.Invoke(target, new object[] { user });
+        }
+        private void UnblockUser(ChatUser user) {
+            unblockUserMethod.Invoke(target, new object[] { user });
+        }
+        private void WhisperUser(ChatUser user) {
+            whisperUserMethod.Invoke(target, new object[] { user });
         }
 
         private void OpenLink(ChatUser user) {
@@ -111,28 +131,49 @@ namespace ChatImprovements.mod {
                 // need 30 pixels of extra space per item added
                 int extraHeightNeeded = (foundLink ? 1 : 0) * 30 + (foundUser && App.MyProfile.ProfileInfo.id != user.id && user.acceptChallenges ? 1 : 0) * 30 +
                     (foundUser && App.MyProfile.ProfileInfo.id != user.id && user.acceptTrades ? 1 : 0) * 30 + (foundUser && App.MyProfile.ProfileInfo.id != user.id ? 1 : 0) * 30;
-                Rect rect = new Rect(Mathf.Min((float)(Screen.width - 105), mousePosition.x), Mathf.Min((float)(Screen.height - extraHeightNeeded - 5), (float)Screen.height - mousePosition.y), 100f, 30f);
-
+                int num = 0;
                 ContextMenu<ChatUser> userContextMenu = null;
                 if (foundLink) {
                     ExtendedChatUser extendedUser = new ExtendedChatUser(user);
                     extendedUser.link = chatLineInfo.link;
-                    userContextMenu = new ContextMenu<ChatUser>(extendedUser, rect);
+                    userContextMenu = new ContextMenu<ChatUser>(extendedUser);
                     userContextMenu.add("Open Link", new ContextMenu<ChatUser>.URCMCallback(OpenLink));
+                    num++;
                 }
                 if (foundUser && App.MyProfile.ProfileInfo.id != user.id) {
+                    num += 2;
                     if (userContextMenu == null) {
-                        userContextMenu = new ContextMenu<ChatUser>(user, rect);
+                        userContextMenu = new ContextMenu<ChatUser>(user);
                     }
                     if (user.acceptChallenges) {
                         userContextMenu.add("Challenge", new ContextMenu<ChatUser>.URCMCallback(ChallengeUser));
+                        num++;
                     }
                     if (user.acceptTrades) {
                         userContextMenu.add("Trade", new ContextMenu<ChatUser>.URCMCallback(TradeUser));
+                        num++;
                     }
+                    userContextMenu.add("Whisper", new ContextMenu<ChatUser>.URCMCallback(WhisperUser));
                     userContextMenu.add("Profile", new ContextMenu<ChatUser>.URCMCallback(ProfileUser));
+                    if (!App.FriendList.IsFriend(user.name) && !App.FriendList.IsFriendPending(user.name))
+                    {
+                        userContextMenu.add("Add Friend", new ContextMenu<ChatUser>.URCMCallback(FriendUser));
+                        num++;
+                    }
+                    if (!App.FriendList.IsBlocked(user.name))
+                    {
+                        userContextMenu.add("Ignore", new ContextMenu<ChatUser>.URCMCallback(BlockUser));
+                        num++;
+                    }
+                    else
+                    {
+                        userContextMenu.add("Unignore", new ContextMenu<ChatUser>.URCMCallback(UnblockUser));
+                        num++;
+                    }
                 }
                 if (userContextMenu != null) {
+                    Rect rect = new Rect(Mathf.Min((float)(Screen.width - 105), mousePosition.x), Mathf.Min((float)(Screen.height - 30 * num - 5), (float)Screen.height - mousePosition.y), 100f, 30f);
+                    userContextMenu.setRect(rect);
                     userContextMenuField.SetValue(target, userContextMenu);
                     App.AudioScript.PlaySFX("Sounds/hyperduck/UI/ui_button_click");
                 }
