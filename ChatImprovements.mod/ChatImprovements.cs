@@ -220,7 +220,25 @@ namespace ChatImprovements.mod {
                         GUILayout.BeginHorizontal(new GUILayoutOption[0]);
                         GUILayout.Label(current.timestamp, timeStampStyle, new GUILayoutOption[] {
                             GUILayout.Width(20f + (float)Screen.height * 0.042f)});
-
+                        if (current.senderAdminRole == AdminRole.Mojang)
+                        {
+                            GUILayout.Label(ResourceManager.LoadTexture("ChatUI/mojang_icon"), new GUILayoutOption[]
+                                            {
+                                GUILayout.Width((float)chatLogStyle.fontSize),
+                                GUILayout.Height((float)chatLogStyle.fontSize)
+                            });
+                        }
+                        else
+                        {
+                            if (current.senderAdminRole == AdminRole.Moderator)
+                            {
+                                GUILayout.Label(ResourceManager.LoadTexture("ChatUI/moderator_icon"), new GUILayoutOption[]
+                                                {
+                                    GUILayout.Width((float)chatLogStyle.fontSize),
+                                    GUILayout.Height((float)chatLogStyle.fontSize)
+                                });
+                            }
+                        }
                         if (!chatLineToChatLineInfoCache.ContainsKey(currentRoomChatLog)) {
                             chatLineToChatLineInfoCache.Add(currentRoomChatLog, new Dictionary<RoomLog.ChatLine, ChatLineInfo>());
                         }
