@@ -11,7 +11,7 @@ using Mono.Cecil;
 
 namespace ChatImprovements.mod {
     public class ChatImprovements : BaseMod {
-        private const bool debug = false;
+        private const bool DEBUG = false;
 
         // fields and methods in ChatUI
         private FieldInfo allowSendingChallengesField;
@@ -252,33 +252,27 @@ namespace ChatImprovements.mod {
                     Color oldColor = GUI.color;
                     // disable warning that one of these expressions is unreachable (due to debug being const)
                     #pragma warning disable 0429
-                    GUI.color = debug ? Color.red : Color.clear;
+                    GUI.color = DEBUG ? Color.red : Color.clear;
                     #pragma warning restore 0429
 
                     GUILayout.BeginArea(chatlogAreaInner);
-                    GUILayout.BeginScrollView(chatScroll, new GUILayoutOption[] { GUILayout.Width(chatlogAreaInner.width), GUILayout.Height(chatlogAreaInner.height)});
+                    GUILayout.BeginScrollView(chatScroll, new GUILayoutOption[] { 
+                        GUILayout.Width(chatlogAreaInner.width), GUILayout.Height(chatlogAreaInner.height)});
                     foreach (RoomLog.ChatLine current in currentRoomChatLog.GetLines()) {
                         GUILayout.BeginHorizontal(new GUILayoutOption[0]);
                         GUILayout.Label(current.timestamp, timeStampStyle, new GUILayoutOption[] {
                             GUILayout.Width(20f + (float)Screen.height * 0.042f)});
-                        if (current.senderAdminRole == AdminRole.Mojang)
-                        {
-                            GUILayout.Label(ResourceManager.LoadTexture("ChatUI/mojang_icon"), new GUILayoutOption[]
-                                            {
+                        if (current.senderAdminRole == AdminRole.Mojang) {
+                            GUILayout.Label(ResourceManager.LoadTexture("ChatUI/mojang_icon"), new GUILayoutOption[] {
                                 GUILayout.Width((float)chatLogStyle.fontSize),
                                 GUILayout.Height((float)chatLogStyle.fontSize)
                             });
                         }
-                        else
-                        {
-                            if (current.senderAdminRole == AdminRole.Moderator)
-                            {
-                                GUILayout.Label(ResourceManager.LoadTexture("ChatUI/moderator_icon"), new GUILayoutOption[]
-                                                {
-                                    GUILayout.Width((float)chatLogStyle.fontSize),
-                                    GUILayout.Height((float)chatLogStyle.fontSize)
-                                });
-                            }
+                        else if (current.senderAdminRole == AdminRole.Moderator) {
+                            GUILayout.Label(ResourceManager.LoadTexture("ChatUI/moderator_icon"), new GUILayoutOption[] {
+                                GUILayout.Width((float)chatLogStyle.fontSize),
+                                GUILayout.Height((float)chatLogStyle.fontSize)
+                            });
                         }
                         if (!chatLineToChatLineInfoCache.ContainsKey(currentRoomChatLog)) {
                             chatLineToChatLineInfoCache.Add(currentRoomChatLog, new Dictionary<RoomLog.ChatLine, ChatLineInfo>());
