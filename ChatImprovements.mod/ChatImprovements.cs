@@ -260,20 +260,13 @@ namespace ChatImprovements.mod {
                         GUILayout.Width(chatlogAreaInner.width), GUILayout.Height(chatlogAreaInner.height)});
                     foreach (RoomLog.ChatLine current in currentRoomChatLog.GetLines()) {
                         GUILayout.BeginHorizontal(new GUILayoutOption[0]);
+                        // if user is an admin, we need to add some extra space for the texture. Actually drawing the
+                        // texture again turns out to be a bad idea, because it won't align properly (rounding
+                        // issue?), but just adding the spacing works
+                        float extraSpace = current.senderAdminRole == AdminRole.Mojang || 
+                            current.senderAdminRole == AdminRole.Moderator ? chatLogStyle.fontSize : 0;
                         GUILayout.Label(current.timestamp, timeStampStyle, new GUILayoutOption[] {
-                            GUILayout.Width(20f + (float)Screen.height * 0.042f)});
-                        if (current.senderAdminRole == AdminRole.Mojang) {
-                            GUILayout.Label(ResourceManager.LoadTexture("ChatUI/mojang_icon"), new GUILayoutOption[] {
-                                GUILayout.Width((float)chatLogStyle.fontSize),
-                                GUILayout.Height((float)chatLogStyle.fontSize)
-                            });
-                        }
-                        else if (current.senderAdminRole == AdminRole.Moderator) {
-                            GUILayout.Label(ResourceManager.LoadTexture("ChatUI/moderator_icon"), new GUILayoutOption[] {
-                                GUILayout.Width((float)chatLogStyle.fontSize),
-                                GUILayout.Height((float)chatLogStyle.fontSize)
-                            });
-                        }
+                            GUILayout.Width(20f + (float)Screen.height * 0.042f + extraSpace)});
                         if (!chatLineToChatLineInfoCache.ContainsKey(currentRoomChatLog)) {
                             chatLineToChatLineInfoCache.Add(currentRoomChatLog, new Dictionary<RoomLog.ChatLine, ChatLineInfo>());
                         }
