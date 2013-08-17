@@ -327,6 +327,11 @@ namespace ChatImprovements.mod {
                     GUILayout.EndArea();
                     // restore old color. Should not be necessary, but it does not hurt to be paranoid
                     GUI.color = oldColor;
+
+                    if (userContextMenu != null)
+                    {
+                        userContextMenu.OnGUI_Last();
+                    }
                 }
             }
             return;
